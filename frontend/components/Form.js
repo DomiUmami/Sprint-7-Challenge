@@ -12,13 +12,15 @@ const validationErrors = {
 // 👇 Here you will create your schema.
 const userSchema = yup.object().shape({
   fullName: yup.string()
-    .required('Full name is required')
-    .min(3, validationErrors.fullNameTooShort)
-    .max(20, validationErrors.fullNameTooLong),
+    .required('full name must be at least 3 characters')
+    .matches(/^\S+$/, 'full name must be at least 3 characters')
+    .min(3, 'full name must be at least 3 characters')
+    .max(20, 'full name must be at most 20 characters'),
+
   size: yup.string()
     .required('Size is required')
-    .oneOf(['small', 'medium', 'large'], validationErrors.sizeIncorrect),
-  toppings: yup.array(),
+    .oneOf(['S', 'M', 'L'], 'Size must be S or M or L'),
+  toppings: yup.array().of(yup.string()),
 });
 
 const getInitialValues = () => ({
@@ -71,21 +73,41 @@ export default function Form() {
           yup.reach(userSchema, name)
           .validate(value)
           .then(() => setErrors((prevErrors) => ({ ...prevErrors, [name]:'' })))
-          .catch((err) => setErrors((prevErrors) => ({ ...prevErrors, [name]: err.errors[0] })));
+          .catch((err) => {
+          
+          setErrors((prevErrors) => ({ ...prevErrors, [name]: err.errors[0] }))
+      });
         }
 
     const onSubmit = (evt) => {
       evt.preventDefault()
 
-      if (formEnabled){
-          setServerSuccess(`Thank you for your order, ${values.fullName}! Your ${values.size} pizza with no toppings is on the way.`);
-          setServerFailure('');
-          setValues(getInitialValues())
-      } else {
-        setServerFailure('Server validation failed')
-        setServerSuccess('')
-      }
-    }
+      userSchema
+    .validate({ fullName: values.fullName, size: values.size })
+    .then(() => {
+
+      const sizeMapping = {
+        'S': 'small',
+        'M': 'medium',
+        'L': 'large',
+      };
+
+      const toppingsMessage = values.toppings.length > 0
+        ? ` with ${values.toppings.length} toppings `
+        : ' with no toppings';
+
+        const sizeDisplay = sizeMapping[values.size] || values.size; 
+
+        setServerSuccess(`Thank you for your order, ${values.fullName}! Your ${sizeDisplay} pizza${toppingsMessage} is on the way.`);
+        setServerFailure('');
+        setValues(getInitialValues());
+        setErrors(getInitialErrors()); // Clear errors state
+      })
+      .catch(() => {
+        setServerFailure('Server validation failed');
+        setServerSuccess('');
+      });
+  };
 
   return (
     <form onSubmit={onSubmit}>
@@ -106,9 +128,9 @@ export default function Form() {
           <label htmlFor="size">Size</label><br />
           <select value={values.size || ''} onChange={onChange} id="size" name="size">
             <option value="" >----Choose Size----</option>
-            <option value="small">Small</option>
-            <option value="medium">Medium</option>
-            <option value="large">Large</option>
+            <option value="S">Small</option>
+            <option value="M">Medium</option>
+            <option value="L">Large</option>
             
           </select>
         </div>

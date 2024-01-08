@@ -5,7 +5,7 @@ import { Routes, Route, NavLink } from 'react-router-dom'
 
 function App() {
 
-//add class active to nav
+
 
 
 
